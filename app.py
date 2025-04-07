@@ -1,183 +1,69 @@
-from flask import Flask
+import streamlit as st
+import random
 
-app = Flask(__name__)
+st.set_page_config(page_title="츄르먹기 게임", layout="centered")
 
-@app.route('/')
-def home():
-    return """
-    <!DOCTYPE html>
-    <html lang="ko">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>츄르먹기 게임</title>
-        <style>
-            body {
-                font-family: 'Arial', sans-serif;
-                background-color: #fdf6e3;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                flex-direction: column;
-                min-height: 100vh;
-                margin: 0;
-                padding: 20px;
-            }
-            h1 {
-                font-size: 28px;
-            }
-            button {
-                margin: 10px;
-                padding: 10px 20px;
-                font-size: 18px;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: background-color 0.3s ease;
-            }
-            #feedButton {
-                background-color: #ff9800;
-                color: white;
-            }
-            #laserButton {
-                background-color: #4caf50;
-                color: white;
-            }
-            #showGameInfoButton {
-                position: fixed;
-                top: 15px;
-                left: 15px;
-                background-color: #2196f3;
-                color: white;
-                font-size: 14px;
-                padding: 6px 10px;
-            }
-            #gameInfo {
-                display: none;
-                background-color: #fff;
-                border: 1px solid #ccc;
-                padding: 20px;
-                margin-top: 20px;
-                border-radius: 10px;
-                max-width: 500px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .probability, #level, #maxLevel {
-                font-size: 20px;
-                margin: 10px 0;
-            }
-        </style>
-    </head>
-    <body>
-        <button id="showGameInfoButton" onclick="toggleGameInfo()">게임 설명 보기</button>
+# 초기 세션 상태 설정
+if "level" not in st.session_state:
+    st.session_state.level = 1
+    st.session_state.laser = 3
+    st.session_state.max_level = 1
+    st.session_state.boost = False
 
-        <h1>🐱 고양이에게 츄르 먹이기 🐱</h1>
-        <p id="level">츄르 주세요</p>
-        <p id="maxLevel"></p>
+probabilities = [
+    1.0, 0.9, 0.86, 0.77, 0.68, 0.61, 0.60, 0.58, 0.57, 0.51,
+    0.45, 0.35, 0.4, 0.32, 0.30, 0.3, 0.3, 0.3, 0.9, 0.2
+]
 
-        <button id="feedButton" onclick="feedCat()">츄르 주기</button>
-        <button id="laserButton" onclick="playWithLaser()">레이저로 놀아주기 (3)</button>
+st.title("🐱 고양이 츄르먹기 게임 🐱")
 
-        <div class="probability" id="probability"></div>
+# 설명 토글
+with st.expander("게임 설명 보기"):
+    st.write("""
+    - 츄르를 먹일수록 레벨이 올라갑니다.
+    - 레벨이 올라갈수록 성공 확률이 낮아져요.
+    - 레이저로 놀아주면 확률이 2배가 되지만, 3번만 사용 가능해요!
+    """)
 
-        <div id="gameInfo">
-            <h3>게임 설명</h3>
-            <p>고양이에게 츄르를 주면서 최대 몇 개를 먹일 수 있는지 도전하세요!</p>
-            <ul>
-                <li>성공 시 츄르 레벨이 올라가고, 실패 시 게임이 초기화됩니다.</li>
-                <li>레이저는 확률을 2배로 높여주지만, 3번만 사용할 수 있어요.</li>
-            </ul>
-        </div>
+st.markdown(f"### 🍡 츄르 레벨: {st.session_state.level}")
+st.markdown(f"🏆 최고 레벨: {st.session_state.max_level}")
+st.markdown(f"📊 성공 확률: {probabilities[st.session_state.level - 1] * (2 if st.session_state.boost else 1) * 100:.1f}%")
+st.markdown(f"🎮 남은 레이저: {st.session_state.laser}")
 
-        <script>
-            let level = 1;
-            let maxLevel = 20;
-            let laserCount = 3;
-            let maxCatLevel = 1;
-            let laserBoostActive = false;
+col1, col2 = st.columns(2)
 
-            const probabilities = [
-                1.0, 0.9, 0.86, 0.77, 0.68, 0.61, 0.60, 0.58, 0.57, 0.51,
-                0.45, 0.35, 0.4, 0.32, 0.30, 0.3, 0.3, 0.3, 0.9, 0.2
-            ];
+with col1:
+    if st.button("츄르 주기 🍡"):
+        chance = probabilities[st.session_state.level - 1]
+        if st.session_state.boost:
+            chance *= 2
+            st.session_state.boost = False
 
-            function feedCat() {
-                if (level <= maxLevel) {
-                    let rand = Math.random();
-                    let chance = laserBoostActive ? probabilities[level - 1] * 2 : probabilities[level - 1];
-                    if (rand <= chance) {
-                        level++;
-                        maxCatLevel = Math.max(maxCatLevel, level);
-                        updateLevelDisplay();
-                        laserBoostActive = false;
-                    } else {
-                        resetGame();
-                    }
-                } else {
-                    document.getElementById("level").innerText = "🎉 츄르 다 먹었어요! 🎉";
-                }
-                updateLaserButton();
-                updateProbability();
-            }
+        if random.random() <= chance:
+            st.session_state.level += 1
+            st.session_state.max_level = max(st.session_state.max_level, st.session_state.level)
+            st.success("츄르 성공! 🐱")
+        else:
+            st.error("츄르 실패! 게임 리셋 😿")
+            st.session_state.level = 1
+            st.session_state.laser = 3
+            st.session_state.boost = False
 
-            function playWithLaser() {
-                if (laserCount > 0) {
-                    laserCount--;
-                    if (Math.random() <= 0.5) {
-                        laserBoostActive = true;
-                        alert("레이저 효과 발동! 고양이가 더 배고파졌어요!");
-                    } else {
-                        alert("고양이가 관심 없어해요 😿");
-                    }
-                    updateLaserButton();
-                } else {
-                    alert("레이저는 더 이상 사용할 수 없어요.");
-                }
-            }
+with col2:
+    if st.session_state.laser > 0:
+        if st.button("레이저로 놀아주기 🔦"):
+            st.session_state.laser -= 1
+            if random.random() <= 0.5:
+                st.session_state.boost = True
+                st.info("고양이가 신났어요! 다음 츄르 확률 2배!")
+            else:
+                st.warning("고양이가 무관심해요...")
 
-            function updateLaserButton() {
-                const laserBtn = document.getElementById("laserButton");
-                laserBtn.innerText = `레이저로 놀아주기 (${laserCount})`;
-                if (laserCount === 0) {
-                    laserBtn.disabled = true;
-                    laserBtn.style.backgroundColor = '#ccc';
-                }
-            }
+# 리셋 버튼
+if st.button("🔄 게임 초기화"):
+    st.session_state.level = 1
+    st.session_state.laser = 3
+    st.session_state.max_level = 1
+    st.session_state.boost = False
+    st.success("게임이 초기화되었습니다!")
 
-            function updateLevelDisplay() {
-                document.getElementById("level").innerText = `츄르 ${level}개 냠`;
-                document.getElementById("maxLevel").innerText = `최고 기록: ${maxCatLevel}개`;
-            }
-
-            function updateProbability() {
-                const prob = probabilities[level - 1] * 100;
-                document.getElementById("probability").innerText = `현재 츄르 성공 확률: ${prob.toFixed(1)}%`;
-            }
-
-            function toggleGameInfo() {
-                const info = document.getElementById("gameInfo");
-                info.style.display = info.style.display === "none" ? "block" : "none";
-            }
-
-            function resetGame() {
-                alert("실패! 고양이가 츄르를 거부했어요. 😿 게임을 다시 시작합니다.");
-                level = 1;
-                laserCount = 3;
-                laserBoostActive = false;
-                updateLevelDisplay();
-                updateLaserButton();
-                updateProbability();
-            }
-
-            // 초기 표시
-            updateLevelDisplay();
-            updateLaserButton();
-            updateProbability();
-        </script>
-    </body>
-    </html>
-    """
-
-# 💡 외부 접속 허용: 0.0.0.0, 포트 5000
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)
