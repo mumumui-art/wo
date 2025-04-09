@@ -1,87 +1,118 @@
 import streamlit as st
 import random
+import pandas as pd
 
 st.set_page_config(page_title="먹는 햄스터", page_icon="🐹")
-st.title("🐹 먹는 햄스터")
 
-# 햄스터 메인 이미지
-st.image("https://i.imgur.com/n6bR1sD.png", width=200)
-
-# 상태 초기화
-if 'score' not in st.session_state:
+# 초기 세션 상태 설정
+if "tries" not in st.session_state:
+    st.session_state.tries = 20
     st.session_state.score = 0
-    st.session_state.count = 0
-    st.session_state.max_count = 20
-    st.session_state.fever = False
-    st.session_state.fever_turn = 0
+    st.session_state.food_index = 0
+    st.session_state.fever = 0
     st.session_state.name = ""
+    st.session_state.ranking = []
 
-# 먹이 리스트
 foods = [
-    {"name": "해바라기씨", "prob": 0.95, "point": 1, "img": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Sunflower_seeds.jpg"},
-    {"name": "잣", "prob": 0.85, "point": 2, "img": "https://upload.wikimedia.org/wikipedia/commons/b/bc/Pine_nuts_closeup.jpg"},
-    {"name": "호두", "prob": 0.7, "point": 3, "img": "https://upload.wikimedia.org/wikipedia/commons/8/85/Walnuts.jpg"},
-    {"name": "사과", "prob": 0.5, "point": 5, "img": "https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg"},
-    {"name": "복숭아", "prob": 0.35, "point": 7, "img": "https://upload.wikimedia.org/wikipedia/commons/4/45/Peach_and_cross_section.jpg"},
-    {"name": "수박", "prob": 0.2, "point": 10, "img": "https://upload.wikimedia.org/wikipedia/commons/e/ee/Watermelon_cross_BNC.jpg"}
+    {"name": "🌻 해바라기씨", "prob": 1.0, "score": 1},
+    {"name": "🌰 잣", "prob": 0.85, "score": 2},
+    {"name": "🥜 호두", "prob": 0.7, "score": 3},
+    {"name": "🍎 사과", "prob": 0.55, "score": 4},
+    {"name": "🍑 복숭아", "prob": 0.4, "score": 5},
+    {"name": "🍉 수박", "prob": 0.25, "score": 6},
 ]
 
-# 이름 입력
-if st.session_state.name == "":
-    st.session_state.name = st.text_input("🐹 햄스터 이름을 입력하세요:", "")
-    st.stop()
+# 타이틀 및 설명
+st.title("🥜🐹 먹는 햄스터 게임")
 
-# 남은 기회 표시
-st.markdown(f"**🍽️ 남은 먹이 기회: {st.session_state.max_count - st.session_state.count} / {st.session_state.max_count}**")
-st.markdown(f"**⭐ 현재 점수: {st.session_state.score}점**")
+with st.expander("📖 게임 설명 보기"):
+    st.markdown("""
+    ### 🎯 게임 목표:
+    - 햄스터에게 다양한 먹이를 먹여 최대 점수를 노려보세요!
 
-# 피버타임 설명
-if st.session_state.fever_turn > 0:
-    st.success("🔥 피버타임 발동! 확률 4배 적용중!")
-    st.image("https://i.imgur.com/EphdQXq.jpg", width=150)
+    ### 🍽️ 먹이 종류:
+    - 🌻 해바라기씨  
+    - 🌰 잣  
+    - 🥜 호두  
+    - 🍎 사과  
+    - 🍑 복숭아  
+    - 🍉 수박 (어려움 최고!)
 
-# 먹이 선택
-food_names = [f["name"] for f in foods]
-selected = st.selectbox("🍎 어떤 먹이를 줄까요?", food_names)
+    ### 📉 규칙:
+    - 먹이가 클수록 먹기 어려워요! (확률 낮아짐)
+    - 성공 시 점수는 더 올라가요!
+    - 실패해도 먹을 수 있는 기회는 줄어들어요 (최대 20번)
 
-if st.button("햄스터에게 먹이 주기"):
-    if st.session_state.count >= st.session_state.max_count:
-        st.warning("모든 먹이를 다 줬어요! 게임이 끝났습니다.")
-    else:
-        st.session_state.count += 1
-        food = next(f for f in foods if f["name"] == selected)
-        prob = food["prob"]
-        
-        # 피버타임 보정
-        if st.session_state.fever_turn > 0:
-            prob *= 4
-            st.session_state.fever_turn -= 1
-        elif random.random() < 0.05:
-            st.session_state.fever_turn = 2
-            st.balloons()
-            st.success("🎡 챗바퀴 피버타임 시작!")
+    ### ⚡ 특별 이벤트:
+    - 5% 확률로 챗바퀴 피버타임!  
+    - 🎉 다음 두 번 먹을 때 확률이 4배 증가해요!
 
-        success = random.random() <= prob
-        st.image(food["img"], width=150)
+    ### 🏆 랭킹도 기록돼요!
+    - 이름을 입력하면 결과가 기록돼요!
 
-        if success:
-            st.session_state.score += food["point"]
-            st.success(f"냠냠! {selected} 먹었어요! (+{food['point']}점)")
-        else:
-            st.error(f"앗! {selected} 실패했어요 ㅠㅠ")
-
-# 게임 종료 후 결과
-if st.session_state.count >= st.session_state.max_count:
-    st.markdown("---")
-    st.subheader("📋 결과 요약")
-    st.markdown(f"""
-    - 이름: **{st.session_state.name}**
-    - 총 점수: **{st.session_state.score}점**
+    **개발자: 조연우**
     """)
-    st.image("https://i.imgur.com/xQT5K5y.jpg", caption="수고했어요!", width=200)
 
-    # 랭킹 기록 파일 저장
-    with open("ranking.txt", "a") as f:
-        f.write(f"{st.session_state.name}: {st.session_state.score}\n")
+# 이름 입력
+if not st.session_state.name:
+    st.session_state.name = st.text_input("🎮 이름을 입력하세요", key="name_input")
 
-    st.button("🔁 다시 시작", on_click=lambda: st.session_state.clear())
+# 현재 상태
+st.subheader(f"🍽️ 남은 먹이 기회: {st.session_state.tries}")
+st.subheader(f"🏅 현재 점수: {st.session_state.score}")
+st.subheader(f"🍖 현재 먹이: {foods[st.session_state.food_index]['name']}")
+
+# 먹이 주기 버튼
+if st.button("🍽️ 먹이 주기"):
+    if st.session_state.tries <= 0:
+        st.warning("😵 햄스터가 배불러요! 게임이 끝났어요.")
+    else:
+        st.session_state.tries -= 1
+
+        # 피버타임 여부
+        fever_multiplier = 4 if st.session_state.fever > 0 else 1
+
+        prob = foods[st.session_state.food_index]['prob'] * fever_multiplier
+        rand = random.random()
+
+        if rand <= prob:
+            gained = foods[st.session_state.food_index]['score']
+            st.session_state.score += gained
+            st.success(f"🎉 성공! 햄스터가 {foods[st.session_state.food_index]['name']} 먹었어요! (+{gained}점)")
+
+            # 다음 먹이로
+            if st.session_state.food_index < len(foods) - 1:
+                st.session_state.food_index += 1
+        else:
+            st.error(f"💔 실패! 햄스터가 {foods[st.session_state.food_index]['name']} 안 먹었어요...")
+
+        # 피버타임 횟수 줄이기
+        if st.session_state.fever > 0:
+            st.session_state.fever -= 1
+
+        # 피버타임 발동 여부
+        if random.random() <= 0.05:
+            st.session_state.fever = 2
+            st.balloons()
+            st.info("🔥 챗바퀴 피버타임 발동! 다음 두 번 확률 4배!")
+
+# 게임 종료 및 결과 저장
+if st.session_state.tries == 0:
+    if st.session_state.name:
+        st.success(f"🎉 게임 종료! {st.session_state.name}님의 최종 점수: {st.session_state.score}")
+        st.session_state.ranking.append((st.session_state.name, st.session_state.score))
+
+    # 랭킹 출력
+    if st.session_state.ranking:
+        st.subheader("🏆 랭킹")
+        df = pd.DataFrame(st.session_state.ranking, columns=["이름", "점수"]).sort_values(by="점수", ascending=False)
+        st.table(df)
+
+    # 다시 시작 버튼
+    if st.button("🔄 다시 시작"):
+        st.session_state.tries = 20
+        st.session_state.score = 0
+        st.session_state.food_index = 0
+        st.session_state.fever = 0
+        st.session_state.name = ""
+
